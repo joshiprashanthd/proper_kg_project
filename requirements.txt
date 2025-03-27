@@ -1,0 +1,14 @@
+openai
+scikit-learn
+pandas
+numpy
+matplotlib
+igraph
+rank_bm25
+nltk
+python-dotenv
+more_itertools
+tqdm
+gravis
+pyarrow
+fastparquet

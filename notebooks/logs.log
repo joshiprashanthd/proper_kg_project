@@ -1,0 +1,27 @@
+2025-03-27 13:16:36,837 - root - INFO - Loading Retriever...
+2025-03-27 13:16:48,279 - root - INFO - Retriever Loaded
+2025-03-27 13:17:21,717 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-03-27 13:17:22,456 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-03-27 13:17:23,166 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-03-27 13:19:21,333 - root - INFO - Question Entities: ['X', 'symptoms', 'variations', 'women', 'fragile', 'genetic', 'children', 'anxiety', 'syndrome']
+2025-03-27 13:19:21,334 - root - INFO - Option Entities: ['stress', 'cortisol', 'depression', 'parenting']
+2025-03-27 13:19:21,335 - root - INFO - Answer Entities: ['cortisol']
+2025-03-27 13:19:21,336 - root - INFO - Question Nodes: ['Nelson syndrome', 'Zollinger-Ellison syndrome', 'Sheehan syndrome', 'anxiety disorder', 'Pallister-hall syndrome', 'triple-A syndrome']
+2025-03-27 13:19:21,336 - root - INFO - Option Nodes: ['Increased urinary cortisol level', 'positive regulation of cortisol biosynthetic process', 'Decreased circulating cortisol level', 'regulation of cortisol secretion', 'cortisol secretion', 'positive regulation of cortisol secretion', 'Decreased salivary cortisol level', 'cortisol biosynthetic process', 'cortisol metabolic process', 'negative regulation of cortisol secretion', 'Increased salivary cortisol level', 'cellular response to cortisol stimulus', 'regulation of cortisol biosynthetic process', 'unipolar depression', 'Abnormal salivary cortisol level', 'postpartum depression', 'response to cortisol', 'negative regulation of cortisol biosynthetic process', 'Abnormality of circulating cortisol level', 'cortisol binding']
+2025-03-27 13:19:21,337 - root - INFO - Answer Nodes: ['cellular response to cortisol stimulus', 'regulation of cortisol biosynthetic process', 'Increased urinary cortisol level', 'positive regulation of cortisol biosynthetic process', 'Abnormal salivary cortisol level', 'Decreased circulating cortisol level', 'positive regulation of cortisol secretion', 'response to cortisol', 'regulation of cortisol secretion', 'Abnormality of circulating cortisol level', 'negative regulation of cortisol biosynthetic process', 'cortisol secretion', 'Decreased salivary cortisol level', 'cortisol biosynthetic process', 'cortisol metabolic process', 'negative regulation of cortisol secretion', 'Increased salivary cortisol level', 'cortisol binding']
+2025-03-27 13:25:51,231 - root - INFO - Creating subgraphs...
+2025-03-27 13:25:52,519 - root - INFO - Question Graph Stats: 21, 54
+2025-03-27 13:25:52,520 - root - INFO - Option Graph Stats: 123, 280
+2025-03-27 13:25:52,520 - root - INFO - Answer Graph Stats: 105, 250
+2025-03-27 13:36:27,631 - root - INFO - Creating subgraphs...
+2025-03-27 13:36:28,867 - root - INFO - Question Graph Stats: 21, 54
+2025-03-27 13:36:28,867 - root - INFO - Option Graph Stats: 123, 280
+2025-03-27 13:36:28,868 - root - INFO - Answer Graph Stats: 105, 250
+2025-03-27 13:37:01,814 - root - INFO - Pruning subgraphs...
+2025-03-27 13:37:01,876 - root - INFO - Pruned Question Graph Stats: 21, 54
+2025-03-27 13:37:01,892 - root - INFO - Pruned Option Graph Stats: 35, 43
+2025-03-27 13:37:01,896 - root - INFO - Pruned Answer Graph Stats: 28, 21
+2025-03-27 13:38:00,151 - root - INFO - Pruning subgraphs...
+2025-03-27 13:38:00,156 - root - INFO - Pruned Question Graph Stats: 21, 54
+2025-03-27 13:38:00,157 - root - INFO - Pruned Option Graph Stats: 35, 43
+2025-03-27 13:38:00,159 - root - INFO - Pruned Answer Graph Stats: 39, 54
