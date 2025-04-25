@@ -4,9 +4,9 @@ import numpy as np
 from rank_bm25 import BM25Okapi
 
 class BM25TripletsRetriever(BaseTripletsRetriever):
-    def __init__(self, edges_df: pd.DataFrame):
-        super().__init__(edges_df=edges_df)
-        tokenized_triplets = self.edges_df[['source', 'target', 'type']].astype(str).agg(' '.join, axis=1).str.split()
+    def __init__(self, edges_df: pd.DataFrame, source_col: str = 'source', target_col: str = 'target', type_col: str = 'type'):
+        super().__init__(edges_df=edges_df, source_col=source_col, target_col=target_col, type_col=type_col)
+        tokenized_triplets = self.edges_df[[source_col, type_col, target_col]].astype(str).agg(' '.join, axis=1).str.split()
         self.bm25 = BM25Okapi(tokenized_triplets)
 
     def run(self, entities: list[str], top_k=10) -> pd.DataFrame:

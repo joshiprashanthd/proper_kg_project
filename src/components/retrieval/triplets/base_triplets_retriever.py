@@ -2,10 +2,10 @@ from more_itertools import flatten
 import pandas as pd
 
 class BaseTripletsRetriever:
-    def __init__(self, edges_df: pd.DataFrame):
-        assert 'source' in edges_df.columns, "edges_df must contain a 'source' column"
-        assert 'target' in edges_df.columns, "edges_df must contain a 'target' column"
-        assert 'type' in edges_df.columns, "edges_df must contain a 'type' column"
+    def __init__(self, edges_df: pd.DataFrame, source_col: str = 'source', target_col: str = 'target', type_col: str = 'type'):
+        assert source_col in edges_df.columns, "edges_df must contain a 'source' column"
+        assert target_col in edges_df.columns, "edges_df must contain a 'target' column"
+        assert type_col in edges_df.columns, "edges_df must contain a 'type' column"
 
         self.edges_df = edges_df
 
