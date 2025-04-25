@@ -1,14 +1,13 @@
 from .base_ner import BaseNER
-from src.utils import OpenAIModel
 from pydantic import BaseModel
 
 class NERResponseFormat(BaseModel):
             entities: list[str]
 
 class OpenAINER(BaseNER):
-    def __init__(self):
-        self.model = OpenAIModel("gpt-4o-mini", 'cuda')
-        self.prompt_template = """You are a medical expert. Your goal is to perform named entity recognition on the following text. Try to find the medical and mental health related entities.
+    def __init__(self, model: BaseModel =  None):
+        super().__init__(model)
+        self.prompt_template = """You are a medical expert performing named entity recognition on mental health text. Your goal is to extract relevant medical and mental health entities.
 
 Please identify:
 1. Medical conditions and diseases
@@ -17,6 +16,13 @@ Please identify:
 4. Medical procedures
 5. Anatomical structures
 6. Medical terminology
+
+For each category, identify short terms that are nouns or noun phrases, typically 1 to 3 words long. Do NOT output long phrases or full sentences as entities.
+
+Handle Edge Cases:
+- Focus on entities relevant to the main subject of the text (e.g., the patient). Do not include entities mentioned only in a hypothetical context or as family history.
+- Do not include medical entities that are explicitly negated (e.g., "no pain", "ruled out diabetes").
+- If a concept is mentioned multiple times, extract it only once.
 
 If the text is ambiguous, unclear, or contains abbreviations, try to resolve them based on medical context.
 If you're uncertain about an entity, include it and note your uncertainty.
