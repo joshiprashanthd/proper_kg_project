@@ -1,11 +1,13 @@
 from src.components.reasoning_path_generation import BaseReasoningPathGenerator
 import igraph as ig
+from src.utils import logger
 
 class ShortestPathReasoningPathGenerator(BaseReasoningPathGenerator):
     def __init__(self):
         super().__init__()
 
     def run(self, G: ig.Graph, fixed_nodes: list[str]):
+        logger.info(f"Generating reasoning paths for nodes: {fixed_nodes}")
         reasoning_paths = []
         for node in fixed_nodes:
             to = G.vs.select(name_notin=[node])

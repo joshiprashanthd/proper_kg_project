@@ -11,8 +11,6 @@ from tenacity import (
     retry_if_result
 )
 
-load_dotenv("/home/sracha/proper_kg_project/.env")
-
 class BaseModel:
     def __init__(self, model_name, device):
         self.device = device
@@ -24,9 +22,7 @@ class BaseModel:
 class OpenAIModel(BaseModel):
     def __init__(self, model_name, device):
         super().__init__(model_name, device)
-        self.client = OpenAI(
-            api_key=""
-        )
+        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(8)) 
     def generate_text(self, prompt, max_tokens=512, temperature=0.7, structured_format=None):

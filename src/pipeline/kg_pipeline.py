@@ -28,101 +28,106 @@ class KGPipeline:
         self.reasoning_path_generator = reasoning_path_generator
         self.explainer = explainer
 
-    def run(self, question, answer, qna_context_prefix: str = "", qna_context: str = "", top_k_triplets=20, pruned_top_k_nodes=20):
-        logger.info(f"Running pipeline...")
-
-        logger.info(f"Question = {question}") 
+    def run(self, question, answer, qna_context_prefix="", qna_context="", top_k_triplets=20, pruned_top_k_nodes=20):
+        logger.info("Running pipeline...")
+        logger.info(f"Question = {question}")
         logger.info(f"Answer = {answer}")
         logger.info(f"QnA Context = {qna_context}")
 
+        # Extract entities
         q_ents, c_ents, a_ents = self.ner.run_mult([question, qna_context, answer])
-
+        
+        # Process entities
         q_ents = list(set(flatten([ent.split(" ") for ent in q_ents])))
         c_ents = list(set(flatten([ent.split(" ") for ent in c_ents])))
         a_ents = list(set(flatten([ent.split(" ") for ent in a_ents])))
-
+        
+        # Retrieve triplets
         logger.info("Retrieving triplets...")
-        result_df = self.triplets_retriever.run(q_ents + c_ents + a_ents, top_k=top_k_triplets)
+        all_entities = q_ents + c_ents + a_ents
+        result_df = self.triplets_retriever.run(all_entities, top_k=top_k_triplets)
         unique_nodes = list(set(result_df['source'].tolist() + result_df['target'].tolist()))
 
         logger.info(f"# Triplets: {len(result_df)}")
         logger.info(f"# Unique nodes: {len(unique_nodes)}")
         logger.info(f"Unique nodes: {unique_nodes}")
+        
+        # Log entity information
+        for ent_type, ents in [("Question", q_ents), ("Option", c_ents), ("Answer", a_ents)]:
+            logger.info(f"# {ent_type} Entities: {len(ents)}")
+            logger.info(f"{ent_type} Entities: {ents}")
 
-
-        logger.info(f"# Question Entities: {len(q_ents)}")
-        logger.info(f"Question Entities: {q_ents}")
-
-        logger.info(f"# Option Entities: {len(c_ents)}")
-        logger.info(f"Option Entities: {c_ents}")
-
-        logger.info(f"# Answer Entities: {len(a_ents)}")
-        logger.info(f"Answer Entities: {a_ents}")
-
+        # Find related nodes
         q_nodes = graph_find_related_nodes_to(unique_nodes, q_ents)
         c_nodes = graph_find_related_nodes_to(unique_nodes, c_ents)
         a_nodes = graph_find_related_nodes_to(unique_nodes, a_ents)
-
-        logger.info(f"Question Nodes: {q_nodes}")
-        logger.info(f"Question Nodes: {q_nodes}")
-
-        logger.info(f"Option Nodes: {c_nodes}")
-        logger.info(f"Option Nodes: {c_nodes}")
-
-        logger.info(f"Answer Nodes: {a_nodes}")
-        logger.info(f"Answer Nodes: {a_nodes}")
-
+        
+        # Log node information
+        for node_type, nodes in [("Question", q_nodes), ("Option", c_nodes), ("Answer", a_nodes)]:
+            logger.info(f"{node_type} Nodes: {nodes}")
+        
+        # Create subgraphs
         logger.info("Creating subgraphs...")
-        q_G = self.subgraph_creator.run(self.G, q_nodes) if len(q_nodes) > 0 else None
-        c_G = self.subgraph_creator.run(self.G, c_nodes) if len(c_nodes) > 0 else None
-        a_G = self.subgraph_creator.run(self.G, q_nodes, to_nodes=a_nodes) if len(q_nodes) > 0 else (None if len(a_nodes) == 0 else self.subgraph_creator.run(self.G, a_nodes))
-
-        if q_G is not None:
-            logger.info(f"Question Graph: Nodes: {q_G.vcount()}, Edges: {q_G.ecount()}")
+        q_G = self.subgraph_creator.run(self.G, q_nodes) if q_nodes else None
+        c_G = self.subgraph_creator.run(self.G, c_nodes) if c_nodes else None
         
-        if c_G is not None:
-            logger.info(f"Option Graph Stats: Nodes: {c_G.vcount()}, Edges: {c_G.ecount()}")
+        if q_nodes and a_nodes:
+            a_G = self.subgraph_creator.run(self.G, q_nodes, to_nodes=a_nodes)
+        elif a_nodes:
+            a_G = self.subgraph_creator.run(self.G, a_nodes)
+        else:
+            a_G = None
         
-        if a_G is not None:
-            logger.info(f"Answer Graph Stats: Nodes: {a_G.vcount()}, Edges: {a_G.ecount()}")
+        # Log subgraph stats
+        for graph_type, graph in [("Question", q_G), ("Option", c_G), ("Answer", a_G)]:
+            if graph is not None:
+                logger.info(f"{graph_type} Graph: Nodes: {graph.vcount()}, Edges: {graph.ecount()}")
         
+        # Prune subgraphs
         logger.info("Pruning subgraphs...")
         pruned_q_G = self.pruner.run(q_G, q_nodes, top_k=pruned_top_k_nodes) if q_G is not None else None
         pruned_c_G = self.pruner.run(c_G, c_nodes, top_k=pruned_top_k_nodes) if c_G is not None else None
         pruned_a_G = self.pruner.run(a_G, q_nodes + a_nodes, top_k=pruned_top_k_nodes) if a_G is not None else None
-
-        reasoning_paths = []
-        if pruned_q_G is not None and pruned_q_G.vcount() > 0:
-            logger.info(f"Pruned Question Graph Stats: Nodes: {pruned_q_G.vcount()}, Edges: {pruned_q_G.ecount()}")
-            q_rp = self.reasoning_path_generator.run(pruned_q_G, q_nodes)
-            reasoning_paths += q_rp if q_rp is not None else []
-        else:
-            logger.warning("No pruned question graph")
         
-        if pruned_c_G is not None and pruned_c_G.vcount() > 0:
-            logger.info(f"Pruned Option Graph Stats: Nodes: {pruned_c_G.vcount()}, Edges: {pruned_c_G.ecount()}")
-            op_rp = self.reasoning_path_generator.run(pruned_c_G, c_nodes)
-            reasoning_paths += op_rp if op_rp is not None else []
-        else:
-            logger.warning("No pruned option graph")
-
-        if pruned_a_G is not None and pruned_a_G.vcount() > 0:
-            logger.info(f"Pruned Answer Graph Stats: Nodes: {pruned_a_G.vcount()}, Edges: {pruned_a_G.ecount()}")
-            ans_rp = self.reasoning_path_generator.run(pruned_a_G, a_nodes)
-            reasoning_paths += ans_rp if ans_rp is not None else []
-        else:
-            logger.warning("No pruned answer graph")
-
-        if len(reasoning_paths) == 0:
+        # Generate reasoning paths
+        reasoning_paths = []
+        
+        # Process each pruned graph
+        for graph_type, graph, nodes in [
+            ("Question", pruned_q_G, q_nodes),
+            ("Option", pruned_c_G, c_nodes),
+            ("Answer", pruned_a_G, a_nodes)
+        ]:
+            if graph is not None and graph.vcount() > 0:
+                logger.info(f"Pruned {graph_type} Graph Stats: Nodes: {graph.vcount()}, Edges: {graph.ecount()}")
+                paths = self.reasoning_path_generator.run(graph, nodes)
+                if paths:
+                    reasoning_paths.extend(paths)
+            else:
+                logger.warning(f"No pruned {graph_type.lower()} graph")
+        
+        # Check for reasoning paths
+        if not reasoning_paths:
             logger.warning("No reasoning paths found")
+            graph_context_prefix = ""
+            graph_context = ""
         else:
             logger.info(f"# Reasoning Paths: {len(reasoning_paths)}")
             logger.info(f"Reasoning Paths: {reasoning_paths}")
-
-        graph_context_prefix = "Reasoning Paths: " if len(reasoning_paths) > 0 else ""
-        graph_context = graph_reasoning_paths_to_text(reasoning_paths) if len(reasoning_paths) > 0 else ""
+            graph_context_prefix = "Reasoning Paths: "
+            graph_context = graph_reasoning_paths_to_text(reasoning_paths)
+            
         logger.info(f"Reasoning Paths: {graph_context}")
         
+        # Generate explanation
         logger.info("Generating explanation...")
-        explanation = self.explainer.run(question, answer, qna_context_prefix, qna_context, graph_context_prefix, graph_context)
+        explanation = self.explainer.run(
+            question,
+            answer, 
+            qna_context_prefix, 
+            qna_context, 
+            graph_context_prefix, 
+            graph_context
+        )
+        
         return explanation, graph_context

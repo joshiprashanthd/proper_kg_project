@@ -3,7 +3,17 @@ import igraph as ig
 import gravis as gv
 from pathlib import Path
 
-def load_graph(kg_dir_path: str, directed=True, remove_node_types: list[str]=None, remove_edge_types: list[str]=None, return_df: bool=False):
+def load_graph(kg_dir_path: str, 
+               node_col: str, 
+               source_col: str, 
+               target_col: str, 
+               node_type_col: str = 'type', 
+               edge_type_col: str = 'type', 
+               directed=True, 
+               remove_node_types: list[str]=None, 
+               remove_edge_types: list[str]=None, 
+               return_df: bool=False):
+    
     edges_path = Path(f"{kg_dir_path}/edges.parquet")
     nodes_path = Path(f"{kg_dir_path}/nodes.parquet")
 
@@ -14,20 +24,20 @@ def load_graph(kg_dir_path: str, directed=True, remove_node_types: list[str]=Non
     nodes_df = pd.read_parquet(nodes_path)
     
     if remove_node_types is not None:
-        nodes_df = nodes_df[~nodes_df['type'].isin(remove_node_types)]
+        nodes_df = nodes_df[~nodes_df[node_type_col].isin(remove_node_types)]
         nodes_df.reset_index(inplace=True, drop=True)
-        edges_df = edges_df[edges_df['source'].isin(nodes_df['name']) & edges_df['target'].isin(nodes_df['name'])]
+        edges_df = edges_df[edges_df[source_col].isin(nodes_df[node_col]) & edges_df[target_col].isin(nodes_df[node_col])]
         edges_df.reset_index(inplace=True, drop=True)
 
     if remove_edge_types is not None:
-        edges_df = edges_df[~edges_df['type'].isin(remove_edge_types)]
+        edges_df = edges_df[~edges_df[edge_type_col].isin(remove_edge_types)]
         edges_df.reset_index(inplace=True, drop=True)
-        nodes_df = nodes_df[nodes_df['name'].isin(edges_df['source']) | nodes_df['name'].isin(edges_df['target'])]
+        nodes_df = nodes_df[nodes_df[node_col].isin(edges_df[source_col]) | nodes_df[node_col].isin(edges_df[target_col])]
         nodes_df.reset_index(inplace=True, drop=True)
 
     G = ig.Graph(directed=directed)
-    G.add_vertices(nodes_df['name'])
-    G.add_edges(edges_df[['source', 'target']].values)
+    G.add_vertices(nodes_df[node_col])
+    G.add_edges(edges_df[[source_col, target_col]].values)
 
     for col in nodes_df.columns:
         G.vs[col] = nodes_df[col]
@@ -61,7 +71,7 @@ def graph_reasoning_paths_to_text(reasoning_paths: list[list[str]]):
                 res.append("->")
             i+=2
         rps_text.append(" ".join(res))
-    rps_text = "\n".join(rps_text)
+    rps_text = "\n".join([f"Path {i+1}: {path}" for i, path in enumerate(rps_text)])
     return rps_text
 
 def graph_reasoning_paths_to_nodes(G: ig.Graph, nodes: list[str]):
@@ -148,10 +158,14 @@ def visualize_graph(graph: ig.Graph, node_type_to_color=None, source=None, targe
             edge.source,
             edge.target,
             hover=hover,
+            kwds={
+                "type": edge["type"],
+            }
         )
     fig = gv.d3(
         g_vis,
         node_label_data_source="name",
+        edge_label_data_source="type",
         many_body_force_strength=-1500,
         edge_curvature=0.1,
         node_hover_neighborhood=True,
