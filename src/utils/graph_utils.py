@@ -2,6 +2,7 @@ import pandas as pd
 import igraph as ig
 import gravis as gv
 from pathlib import Path
+from .umls_utils import get_umls_relation_type
 
 def load_graph(kg_dir_path: str, 
                node_col: str, 
@@ -67,7 +68,7 @@ def graph_reasoning_paths_to_text(reasoning_paths: list[list[str]]):
             res.append('(' + rp[i] + ')')
             if i < len(rp) - 1:
                 res.append("--")
-                res.append(rp[i+1])
+                res.append(f"[{get_umls_relation_type(rp[i+1])}]")
                 res.append("->")
             i+=2
         rps_text.append(" ".join(res))
