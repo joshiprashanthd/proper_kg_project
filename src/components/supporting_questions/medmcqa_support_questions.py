@@ -93,7 +93,7 @@ Read the QA pairs from the <input> tag and generate the output:
 </input>
 """
 
-    def generate_text(self, inputs: str) -> str:
+    def run(self, inputs: str) -> str:
         return self.model.generate_text(
             prompt=self.prompt.format(inputs=inputs),
             structured_format=ResponseFormat,

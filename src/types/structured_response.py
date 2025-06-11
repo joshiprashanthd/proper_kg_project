@@ -6,6 +6,11 @@ class SymptomPhrase(BaseModel):
     symptom: str = Field(description="The symptom of the symptom phrase.")
     analysis: str = Field(description="The analysis of the symptom phrase.")
 
+class SymptomPhraseLabel(BaseModel):
+    phrase: str = Field(description="The symptom phrase.")
+    label: Literal["Anxiety", "Depression", "Both Anxiety and Depression"] = Field(description="The label of the symptom phrase.")
+    justification: str = Field(description="The justification for the label of the symptom phrase.")
+
 class TripletLabel(BaseModel):
     triplet: str = Field(description="triplet found in the prompt itself")
     justification: str = Field(description="Whether it is relevant to the Question and Answer, and whether it provides insights that could help in arriving at the Answer, with a 4 to 5 lines of justification.")

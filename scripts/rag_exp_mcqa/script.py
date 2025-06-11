@@ -41,29 +41,29 @@ SENTENCE_CONTEXT_TEMPLATE = """Below is the additional context for the sentence 
 def build_context(results):
     return "\n\n".join([result.content for result in results])
 
-def pipeline(question: str, options: list[str], answer: str, useful_triplets_top_k=10, triplets_top_k = 20, dense_rag_top_k = 5, sparse_rag_top_k = 5):
+def pipeline(question: str, options: list[str], answer: str):
     query = f"Question: {question}\nOptions: {options}\nAnswer: {answer}"
-    faiss_triplets_rag_docs = faiss_triplets_rag.run(query, top_k=triplets_top_k)
-    bm25_triplets_rag_docs = bm25_triplets_rag.run(query, top_k=triplets_top_k)
+    faiss_triplets_rag_docs = faiss_triplets_rag.run(query)
+    bm25_triplets_rag_docs = bm25_triplets_rag.run(query)
     
     usefulness_triplets_docs = triplet_usefulness.run(query, keep_first_definition([t.content for t in faiss_triplets_rag_docs + bm25_triplets_rag_docs]))
-    topk_useful_triplets_docs = [t for t in sorted(usefulness_triplets_docs, key=lambda t: t.score, reverse=True) if t.label == "Useful"][:useful_triplets_top_k]
+    usefulness_triplets_docs = [t for t in sorted(usefulness_triplets_docs, key=lambda t: t.score, reverse=True) if t.label == "Useful"]
     
     naive_rag_query = f"""{query}
-    {build_context(list(set(topk_useful_triplets_docs)))}"""
+    {build_context(list(set(usefulness_triplets_docs)))}"""
     
-    faiss_rag_docs = faiss_rag.run(naive_rag_query, top_k=dense_rag_top_k) 
-    bm25_rag_docs = bm25_rag.run(naive_rag_query, top_k=sparse_rag_top_k)
+    faiss_rag_docs = faiss_rag.run(naive_rag_query) 
+    bm25_rag_docs = bm25_rag.run(naive_rag_query)
     
     context = CONTEXT_TEMPLATE.format(
         rag_results=build_context(list(set(faiss_rag_docs + bm25_rag_docs))),
-        triplets="\n\n".join(keep_first_definition([t.triplet for t in topk_useful_triplets_docs]))
+        triplets="\n\n".join(keep_first_definition([t.triplet for t in usefulness_triplets_docs]))
     )
     
     explanation = triplet_explainer.run(query, context)
     one_paragraph_explanation = one_paragraph_explainer.run(query, context)
 
-    return explanation, one_paragraph_explanation, faiss_rag_docs, bm25_rag_docs, usefulness_triplets_docs, topk_useful_triplets_docs
+    return explanation, one_paragraph_explanation, faiss_rag_docs, bm25_rag_docs, usefulness_triplets_docs
 
 def thread_func(batch: pd.DataFrame, batch_save_path: Path):
     outputs = {
@@ -71,27 +71,24 @@ def thread_func(batch: pd.DataFrame, batch_save_path: Path):
         "one_paragraph_explanation": [],
         "faiss_rag_docs": [],
         "bm25_rag_docs": [],
-        "usefulness_triplets_docs": [],
-        "topk_useful_triplets_docs": []
+        "usefulness_triplets_docs": []
     }
     for _, row in batch.iterrows():
         question = row["question"]
         options = [row["option1"], row["option2"], row["option3"], row["option4"]]
         answer = row["answer"]
-        explanation, one_paragraph_explanation, dense_rag_results, sparse_rag_results, triplet_labels, useful_triplets = pipeline(question, options, answer)
+        explanation, one_paragraph_explanation, faiss_rag_docs, bm25_rag_docs, usefulness_triplets_docs = pipeline(question, options, answer)
         outputs["explanation"].append(explanation)
         outputs["one_paragraph_explanation"].append(one_paragraph_explanation)
-        outputs["faiss_rag_docs"].append([doc.model_dump()  for doc in dense_rag_results])
-        outputs["bm25_rag_docs"].append([doc.model_dump() for doc in sparse_rag_results])
-        outputs["usefulness_triplets_docs"].append([t.model_dump() for t in triplet_labels])
-        outputs["topk_useful_triplets_docs"].append([t.model_dump() for t in useful_triplets])      
+        outputs["faiss_rag_docs"].append([doc.model_dump()  for doc in faiss_rag_docs])
+        outputs["bm25_rag_docs"].append([doc.model_dump() for doc in bm25_rag_docs])
+        outputs["usefulness_triplets_docs"].append([t.model_dump() for t in usefulness_triplets_docs])      
     
     batch.loc[:, 'explanation'] = outputs["explanation"]
     batch.loc[:, 'one_paragraph_explanation'] = outputs["one_paragraph_explanation"]
     batch.loc[:, 'faiss_rag_docs'] = outputs["faiss_rag_docs"]
     batch.loc[:, 'bm25_rag_docs'] = outputs["bm25_rag_docs"]
     batch.loc[:, 'usefulness_triplets_docs'] = outputs["usefulness_triplets_docs"]
-    batch.loc[:, 'topk_useful_triplets_docs'] = outputs["topk_useful_triplets_docs"]
     batch.to_json(batch_save_path, orient="records", lines=True)
 
 if __name__ == "__main__":
@@ -112,11 +109,11 @@ if __name__ == "__main__":
     if args.random_sample is not None:
         df = df.sample(n=args.random_sample, random_state=42)
     
-    faiss_triplets_rag = FaissTripletsRag()
-    bm25_triplets_rag = BM25TripletsRag()
+    faiss_triplets_rag = FaissTripletsRag(top_k=10)
+    bm25_triplets_rag = BM25TripletsRag(top_k=10)
     triplet_usefulness = TripletsUsefulness()
-    faiss_rag = FaissRag()
-    bm25_rag = BM25Rag()
+    faiss_rag = FaissRag(top_k=5)
+    bm25_rag = BM25Rag(top_k=5)
     triplet_explainer = TripletRAGExplainer()
     one_paragraph_explainer = OneParagraphExplainer() 
 

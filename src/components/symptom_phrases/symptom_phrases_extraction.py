@@ -10,7 +10,7 @@ class SymptomPhrasesExtractor:
     def __init__(self, model_name: str = "gpt-4o-mini"):
         self.model = OpenAIModel(model_name, 'cuda')
     
-    def extract_symptom_phrases(self, text: str) -> list[SymptomPhrase]:
+    def run(self, text: str) -> list[SymptomPhrase]:
         prompt = """You are a medical and mental health expert. Your goal is to extract phrases from the patient's text that indicate symptoms and provide a detailed analysis for each phrase. Each analysis should include a descriptive symptom for the symptom or condition, identify potential hidden difficulties the patient might be experiencing, and provide additional context or information to better understand the phrase's implications. Symptom should reflect the specific symptom or condition (e.g., "Social withdrawal," "Chronic fatigue," "Intrusive thoughts").
 
 Learn from the examples below:

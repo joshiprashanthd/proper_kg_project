@@ -26,21 +26,21 @@ def build_naive_rag_query(docs: list[TripletLabel]):
 """
     return "\n".join([DOC_TEMPLATE.format(triplet=doc.triplet, justification=doc.justification, label=doc.label) for doc in docs])
 
-def pipeline(phrase: str, symptom: str, analysis: str, useful_triplets_top_k=10, faiss_triplets_top_k = 10, bm25_triplets_top_k = 10, faiss_rag_top_k = 5, bm25_rag_top_k = 5):
+def pipeline(phrase: str, symptom: str, analysis: str):
     query = f"{phrase}\n{symptom}\n{analysis}"
     
-    faiss_triplets_rag_docs = faiss_triplets_rag.run(query, top_k=faiss_triplets_top_k)
-    bm25_triplets_rag_docs = bm25_triplets_rag.run(query, top_k=bm25_triplets_top_k)
+    faiss_triplets_rag_docs = faiss_triplets_rag.run(query)
+    bm25_triplets_rag_docs = bm25_triplets_rag.run(query)
     
     usefulness_triplets_docs = triplet_usefulness.run(query, keep_first_definition([t.content for t in faiss_triplets_rag_docs + bm25_triplets_rag_docs]))
-    topk_useful_triplets_docs = [t for t in sorted(usefulness_triplets_docs, key=lambda t: t.score, reverse=True) if t.label == "Useful"][:useful_triplets_top_k]
+    usefulness_triplets_docs = [t for t in sorted(usefulness_triplets_docs, key=lambda t: t.score, reverse=True) if t.label == "Useful"]
     
-    naive_rag_query = f"{query}\n{build_naive_rag_query(topk_useful_triplets_docs)}"
+    naive_rag_query = f"{query}\n{build_naive_rag_query(usefulness_triplets_docs)}"
     
-    faiss_rag_docs = faiss_rag.run(naive_rag_query, top_k=faiss_rag_top_k) 
-    bm25_rag_docs = bm25_rag.run(naive_rag_query, top_k=bm25_rag_top_k)
+    faiss_rag_docs = faiss_rag.run(naive_rag_query) 
+    bm25_rag_docs = bm25_rag.run(naive_rag_query)
     
-    return faiss_rag_docs, bm25_rag_docs, usefulness_triplets_docs, topk_useful_triplets_docs
+    return faiss_rag_docs, bm25_rag_docs, usefulness_triplets_docs
 
 def thread_func(batch: pd.DataFrame, batch_save_path: Path):
     outputs = {
@@ -52,7 +52,6 @@ def thread_func(batch: pd.DataFrame, batch_save_path: Path):
         "faiss_rag_results": [],
         "bm25_rag_results": [],
         "usefulness_triplets_docs": [],
-        "topk_useful_triplets_docs": []
     }
 
     for _, row in batch.iterrows():
@@ -64,7 +63,7 @@ def thread_func(batch: pd.DataFrame, batch_save_path: Path):
             symptom = sp['symptom']
             analysis = sp['analysis']
 
-            faiss_rag_docs, bm25_rag_docs, usefulness_triplets_docs, topk_useful_triplets_docs = pipeline(phrase, symptom, analysis)
+            faiss_rag_docs, bm25_rag_docs, usefulness_triplets_docs = pipeline(phrase, symptom, analysis)
 
             outputs['text'].append(text)
             outputs['label'].append(label)
@@ -74,7 +73,6 @@ def thread_func(batch: pd.DataFrame, batch_save_path: Path):
             outputs['faiss_rag_results'].append([doc.model_dump()  for doc in faiss_rag_docs])
             outputs['bm25_rag_results'].append([doc.model_dump() for doc in bm25_rag_docs])
             outputs['usefulness_triplets_docs'].append([t.model_dump() for t in usefulness_triplets_docs])
-            outputs['topk_useful_triplets_docs'].append([t.model_dump() for t in topk_useful_triplets_docs])
     
     save_df = pd.DataFrame(outputs)
     save_df.to_json(batch_save_path, orient="records", lines=True)
@@ -98,11 +96,11 @@ if __name__ == "__main__":
         df = df.sample(n=args.random_sample, random_state=42)
     
     symptom_phrase_extractor = SymptomPhrasesExtractor()
-    faiss_triplets_rag = FaissTripletsRag()
-    bm25_triplets_rag = BM25TripletsRag()
+    faiss_triplets_rag = FaissTripletsRag(top_k=5)
+    bm25_triplets_rag = BM25TripletsRag(top_k=5)
     triplet_usefulness = TripletsUsefulness()
-    faiss_rag = FaissRag()
-    bm25_rag = BM25Rag()
+    faiss_rag = FaissRag(top_k=3)
+    bm25_rag = BM25Rag(top_k=3)
 
     timestring = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     run_folder = Path(f"./outputs/{jsonl_path.stem}/{timestring}")
