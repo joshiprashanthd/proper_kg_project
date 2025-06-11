@@ -49,8 +49,8 @@ def thread_func(batch: pd.DataFrame, batch_save_path: Path):
         "phrase": [],
         "symptom": [],
         "analysis": [],
-        "faiss_rag_results": [],
-        "bm25_rag_results": [],
+        "faiss_rag_docs": [],
+        "bm25_rag_docs": [],
         "usefulness_triplets_docs": [],
     }
 
@@ -70,8 +70,8 @@ def thread_func(batch: pd.DataFrame, batch_save_path: Path):
             outputs['phrase'].append(phrase)
             outputs['symptom'].append(symptom)
             outputs['analysis'].append(analysis)
-            outputs['faiss_rag_results'].append([doc.model_dump()  for doc in faiss_rag_docs])
-            outputs['bm25_rag_results'].append([doc.model_dump() for doc in bm25_rag_docs])
+            outputs['faiss_rag_docs'].append([doc.model_dump()  for doc in faiss_rag_docs])
+            outputs['bm25_rag_docs'].append([doc.model_dump() for doc in bm25_rag_docs])
             outputs['usefulness_triplets_docs'].append([t.model_dump() for t in usefulness_triplets_docs])
     
     save_df = pd.DataFrame(outputs)

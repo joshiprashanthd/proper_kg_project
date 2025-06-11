@@ -12,3 +12,9 @@ tqdm
 gravis
 pyarrow
 fastparquet
+neo4j
+langchain-huggingface
+langchain-openai
+llama-index
+llama-index-bm25-retriever
+faiss-cpu
