@@ -1,0 +1,23 @@
+services:
+  neo4j:
+    image: neo4j:latest
+    container_name: neo4j-container
+    environment:
+      - NEO4J_AUTH=neo4j/neo4jadmin
+    volumes:
+      - ./flat_files_umls_full_pref:/import_umls_full
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_config:/config
+      - neo4j_plugins:/plugins
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    command: /bin/bash -c "neo4j-admin database import full --nodes=Semantic='/import_umls_full/TUIs.csv' --nodes=Concept='/import_umls_full/CUIs.csv' --nodes=Term='/import_umls_full/SUIs.csv' --nodes=Definition='/import_umls_full/DEFs.csv' --nodes=Code='/import_umls_full/CODEs.csv'  --relationships=STY='/import_umls_full/CUI-TUIs.csv' --relationships='/import_umls_full/CUI-CUIs.csv' --relationships=PREF_TERM='/import_umls_full/CUI-SUIs.csv' --relationships=CODE="/import_umls_full/CUI-CODEs.csv" --relationships="/import_umls_full/CODE-SUIs.csv" --relationships=DEF='/import_umls_full/DEFrel.csv' --skip-bad-relationships=true --skip-duplicate-nodes=true --overwrite-destination --verbose --bad-tolerance=500000 2>&1 | tee /logs/import.log || echo 'Database already exists, skipping import.' && neo4j console 2>&1 | tee /logs/console-neo4j.log "
+    # command: neo4j console
+
+volumes:
+  neo4j_logs:
+  neo4j_config:
+  neo4j_plugins:
+  neo4j_data:

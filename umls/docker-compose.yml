@@ -1,0 +1,19 @@
+services:
+  mariadb:
+    image: mariadb:latest
+    container_name: mariadb-container
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - mariadb_config:/etc/mysql/conf.d
+    environment:
+      - MYSQL_ROOT_PASSWORD=admin
+      - MYSQL_DATABASE=umls
+      - MYSQL_USER=admin
+      - MYSQL_PASSWORD=admin
+    ports:
+      - "4000:3306"
+    restart: always
+
+volumes:
+  mariadb_data:
+  mariadb_config:
