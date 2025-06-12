@@ -20,7 +20,7 @@ def thread_func(batch: pd.DataFrame, batch_save_path: Path):
 
     for _, row in batch.iterrows():
         text = row["text"]
-        response = extractor.extract_symptom_phrases(text)
+        response = extractor.run(text)
         outputs["symptom_phrases"].append([phrase.model_dump() for phrase in response])
     batch.loc[:, 'symptom_phrases'] = outputs["symptom_phrases"]
     batch.to_json(batch_save_path, orient='records', lines=True)
