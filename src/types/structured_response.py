@@ -1,6 +1,13 @@
 from pydantic import BaseModel, Field
 from typing import Literal
 
+class ConversationTurn(BaseModel):
+    role: Literal["user", "assistant"] = Field(description="The role of the speaker.")
+    content: str = Field(description="The content of the speaker.")
+
+class Conversation(BaseModel):
+    turns: list[ConversationTurn] = Field(description="The conversation between user and model.")
+
 class SymptomPhrase(BaseModel):
     phrase: str = Field(description="The symptom phrase.")
     symptom: str = Field(description="The symptom of the symptom phrase.")

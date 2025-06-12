@@ -32,6 +32,6 @@ Output:
 """
     
     def run(self, query: str, context: str) -> SymptomPhraseLabel:
-        response = self.model.generate_text(self.prompt.format(query=query, context=context), structured_format=SymptomPhraseLabel)
+        response = self.model.generate_text(self.prompt.format(query=query, context=context), structured_format=SymptomPhraseLabel, max_tokens=2048)
         return response
         
