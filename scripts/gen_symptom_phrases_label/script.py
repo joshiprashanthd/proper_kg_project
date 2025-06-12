@@ -62,7 +62,7 @@ if __name__ == "__main__":
     parser.add_argument("jsonl_path", type=str)
     parser.add_argument("--random_sample", type=int, default=100)
     parser.add_argument("--batch_size", type=int, default=10)
-    parser.add_argument("--workers", type=int, default=10)
+    parser.add_argument("--workers", type=int, default=32)
 
     args = parser.parse_args()
     jsonl_path = Path(args.jsonl_path)
@@ -87,5 +87,5 @@ if __name__ == "__main__":
         for future in tqdm(futures):
             future.result()
     
-    shutil.copyfile(jsonl_path, run_folder / f"{jsonl_path.stem}_input.jsonl")
     merge_jsonl_files(run_folder)
+    shutil.copyfile(jsonl_path, run_folder / f"{jsonl_path.stem}_input.jsonl")

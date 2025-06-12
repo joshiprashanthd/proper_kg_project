@@ -56,5 +56,5 @@ if __name__ == "__main__":
         for future in tqdm(futures):
             future.result()
     
-    shutil.copyfile(csv_path, run_folder / f"{csv_path.stem}_input.csv")
     merge_jsonl_files(run_folder)
+    shutil.copyfile(csv_path, run_folder / f"{csv_path.stem}_input.csv")
