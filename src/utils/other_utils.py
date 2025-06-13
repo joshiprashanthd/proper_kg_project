@@ -10,6 +10,7 @@ def merge_jsonl_files(run_path: Path):
         dfs.append(df)
     merged_df = pd.concat(dfs, ignore_index=True)
     merged_df.to_json(run_path / "merged.jsonl", orient='records', lines=True)
+    merged_df.to_json(run_path / "merged.json", orient='records')
 
 def merge_csv_files(run_path: Path, dropna=True, remove_duplicates=True):
     dfs = [pd.read_csv(file) for file in run_path.rglob("*.csv")]

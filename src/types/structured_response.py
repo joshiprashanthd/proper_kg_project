@@ -4,9 +4,19 @@ from typing import Literal
 class ConversationTurn(BaseModel):
     role: Literal["user", "assistant"] = Field(description="The role of the speaker.")
     content: str = Field(description="The content of the speaker.")
+    characteristic: Literal[
+        "Symptoms Identification",
+        "Disease/Disorder Identification",
+        "Follow-up Questions",
+        "Suggestions/Recommendations/Solutions",
+        "Explanations"
+    ] = Field(description="The characteristic of the turn.")
 
 class Conversation(BaseModel):
-    turns: list[ConversationTurn] = Field(description="The conversation between user and model.")
+    turns: list[ConversationTurn] = Field(description="The conversation between user and assistant.")
+
+class MultipleConversations(BaseModel):
+    conversations: list[Conversation] = Field(description="The conversations between user and assistant")
 
 class SymptomPhrase(BaseModel):
     phrase: str = Field(description="The symptom phrase.")
