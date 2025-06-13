@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from src.components.conversations import AngstSymptomDisorderId
+from src.components.conversations import AngstConversation
 from src.utils import convert_df_to_nested_structure, merge_jsonl_files
 
 PHRASE_TEMPLATE = """
@@ -43,7 +43,7 @@ def thread_func(batch: pd.DataFrame, batch_save_path: Path):
     }
     for i, row in batch.iterrows():
         query, context = create_inputs(row)
-        response = conv_angst.run(query, context)
+        response = angst_conv.run(query, context)
         outputs["conversation"].append(response.model_dump())
     batch.loc[:, 'conversation'] = outputs["conversation"]
     batch.to_json(batch_save_path, orient='records', lines=True)
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     jsonl_path = Path(args.jsonl_path)
 
-    conv_angst = AngstSymptomDisorderId()
+    angst_conv = AngstConversation()
     timestring = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     run_path = Path(f"./outputs/{jsonl_path.stem}/{timestring}")
     run_path.mkdir(parents=True, exist_ok=True)

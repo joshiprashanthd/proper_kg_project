@@ -1,7 +1,7 @@
 from src.utils import OpenAIModel
 from src.types import Conversation
 
-class AngstSymptomDisorderId:
+class AngstConversation:
     def __init__(self, model_name: str = "gpt-4o-mini"):
         self.model = OpenAIModel(model_name, 'cpu')
         self.prompt = """You are a medical and mental health expert. Your goal is to generate a real world conversation between user and assistant.
