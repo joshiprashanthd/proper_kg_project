@@ -8,36 +8,15 @@ import pandas as pd
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from src.components.conversations import AngstSymptomDisorderId
-from src.utils import convert_df_to_nested_structure
+from src.utils import convert_df_to_nested_structure, merge_jsonl_files
 
 PHRASE_TEMPLATE = """
 <phrase> 
 Phrase: '{phrase}' 
-
-<symptom>
-{symptom}
-</symptom>
-
-<analysis>
-{analysis}
-</analysis>
-
-<phrase_label>
-{phrase_label}
-</phrase_label>
-
-<justification>
-{justification}
-</justification>
-
-<retrieved_documents>
-{faiss_rag_docs}
-{bm25_rag_docs}
-</retrieved_documents>
-
-<triplets>
-{usefulness_triplets_docs}
-</triplets>
+Symptom: '{symptom}'
+Analysis: '{analysis}'
+Label: '{label}'
+Justification: '{justification}'
 </phrase>
 """
 
@@ -49,11 +28,8 @@ def create_inputs(row: pd.Series):
             phrase=phrase['phrase'],
             symptom=phrase['symptom'],
             analysis=phrase['analysis'],
-            phrase_label=phrase['symptom_phrase_label']['label'],
-            justification=phrase['symptom_phrase_label']['justification'],
-            faiss_rag_docs="\n\n".join([data['content'] for data in phrase['faiss_rag_docs']]),
-            bm25_rag_docs="\n\n".join([data['content'] for data in phrase['bm25_rag_docs']]),
-            usefulness_triplets_docs="\n\n".join([data['triplet'] for data in phrase['usefulness_triplets_docs']])
+            label=phrase['label'],
+            justification=phrase['justification']
         )
         phrase_contexts.append(phrase_context)
     
@@ -90,8 +66,6 @@ if __name__ == "__main__":
     if args.random_sample:
         df = df.sample(args.random_sample, random_state=42)
     
-    df = convert_df_to_nested_structure(df)
-
     batch_size = args.batch_size
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
         futures = []
@@ -102,6 +76,7 @@ if __name__ == "__main__":
         for future in tqdm(as_completed(futures)):
             future.result()
 
+    merge_jsonl_files(run_path)
 
 
 

@@ -43,21 +43,14 @@ def pipeline(phrase: str, symptom: str, analysis: str):
     return faiss_rag_docs, bm25_rag_docs, usefulness_triplets_docs
 
 def thread_func(batch: pd.DataFrame, batch_save_path: Path):
-    outputs = {
-        "text": [],
-        "label": [],
-        "phrase": [],
-        "symptom": [],
-        "analysis": [],
-        "faiss_rag_docs": [],
-        "bm25_rag_docs": [],
-        "usefulness_triplets_docs": [],
-    }
+    outputs = []
 
     for _, row in batch.iterrows():
         text = row["text"]
         label = row["label"]
 
+        symptom_phrases = []
+        
         for sp in row["symptom_phrases"]:
             phrase = sp['phrase']
             symptom = sp['symptom']
@@ -65,14 +58,20 @@ def thread_func(batch: pd.DataFrame, batch_save_path: Path):
 
             faiss_rag_docs, bm25_rag_docs, usefulness_triplets_docs = pipeline(phrase, symptom, analysis)
 
-            outputs['text'].append(text)
-            outputs['label'].append(label)
-            outputs['phrase'].append(phrase)
-            outputs['symptom'].append(symptom)
-            outputs['analysis'].append(analysis)
-            outputs['faiss_rag_docs'].append([doc.model_dump()  for doc in faiss_rag_docs])
-            outputs['bm25_rag_docs'].append([doc.model_dump() for doc in bm25_rag_docs])
-            outputs['usefulness_triplets_docs'].append([t.model_dump() for t in usefulness_triplets_docs])
+            symptom_phrases.append({
+                "phrase": phrase,
+                "symptom": symptom,
+                "analysis": analysis,
+                "faiss_rag_results": [doc.model_dump() for doc in faiss_rag_docs],
+                "bm25_rag_results": [doc.model_dump() for doc in bm25_rag_docs],
+                "usefulness_triplets_docs": [t.model_dump() for t in usefulness_triplets_docs]
+            })
+        
+        outputs.append({
+            "text": text,
+            "label": label,
+            "symptom_phrases": symptom_phrases
+        })
     
     save_df = pd.DataFrame(outputs)
     save_df.to_json(batch_save_path, orient="records", lines=True)
@@ -89,13 +88,9 @@ if __name__ == "__main__":
     jsonl_path = Path(args.jsonl_path)
     df = pd.read_json(jsonl_path, lines=True)
     
-    if "symptom_phrases" not in df.columns:
-        raise ValueError("The jsonl file does not have 'symptom_phrases' column.")
-    
     if args.random_sample is not None:
         df = df.sample(n=args.random_sample, random_state=42)
     
-    symptom_phrase_extractor = SymptomPhrasesExtractor()
     faiss_triplets_rag = FaissTripletsRag(top_k=5)
     bm25_triplets_rag = BM25TripletsRag(top_k=5)
     triplet_usefulness = TripletsUsefulness()
