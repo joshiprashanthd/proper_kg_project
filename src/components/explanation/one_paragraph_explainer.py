@@ -19,8 +19,9 @@ Task Instructions:
 - Go through each paragraph given as the additional context.
 - A paragraph contains information relating to the question and answer might help you find missing pieces that could lead you to the answer starting from the question.
 - The explanation should be very clear in how it connects the question to the answer.
+- Only use the information given to you in the <context> tag to generate the explanation.
 
-IMPORTANT: You explanations should written in a single paragraph. Do not break the explanation into multiple paragraphs. The explanations should be 100 to 150 words long.
+IMPORTANT: You explanations should written in a single paragraph. Do not break the explanation into multiple paragraphs. The explanations should be 200 to 250 words long.
 
 <query>
 {query}
@@ -36,4 +37,4 @@ Explanation:
     
     def run(self, query: str, context: str):
         prompt = self.prompt_template.format(query=query, context=context)
-        return self.model.generate_text(prompt, max_tokens=1024)
+        return self.model.generate_text(prompt, max_tokens=2048)
