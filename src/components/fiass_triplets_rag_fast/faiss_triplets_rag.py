@@ -10,6 +10,8 @@ class FaissTripletsRag:
         logger.info(f"Loading FAISS vector store from {vector_store_path}")
         self.embeddings_func = HuggingFaceEmbeddings(model_name="FremyCompany/BioLORD-2023", model_kwargs={"device": "cuda"})
         self.vector_store = FAISS.load_local(str(vector_store_path), embeddings=self.embeddings_func, allow_dangerous_deserialization=True)
+        self.index = faiss.IndexIVFFlat(self.vector_store.index, self.vector_store.index.d, 100)
+        self.index.
         self.top_k = top_k
     
     def run(self, query: str) -> list[RagDocument]:
