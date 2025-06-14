@@ -7,35 +7,20 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 from datetime import datetime
-import re
 
-from src.components.usefulness import TripletsUsefulness
 from src.components.explanation import TripletRAGExplainer, OneParagraphExplainer
 from src.components.faiss_rag import FaissRag
 from src.components.bm25_rag import BM25Rag
 from src.components.faiss_triplets_rag import FaissTripletsRag
 from src.components.bm25_triplets_rag import BM25TripletsRag
+from src.components.conversations import MCQAConversation
 from src.utils import merge_jsonl_files, get_completed_batch_numbers, keep_first_definition
+from src.types import Conversation
 
 CONTEXT_TEMPLATE = """Below is the additional context for query:
-
 <rag_paragraphs>
 {rag_results}
 </rag_paragraphs>
-
-<triplets>
-{triplets}
-</triplets>
-"""
-
-SENTENCE_CONTEXT_TEMPLATE = """Below is the additional context for the sentence '{sentence}':
-<rag_paragraphs>
-{rag_results}
-</rag_paragraphs>
-
-<triplets>
-{triplets}
-</triplets>
 """
 
 def build_context(results):
@@ -43,14 +28,19 @@ def build_context(results):
 
 def pipeline(question: str, options: list[str], answer: str):
     query = f"Question: {question}\nOptions: {options}\nAnswer: {answer}"
-    faiss_triplets_rag_docs = faiss_triplets_rag.run(query)
-    bm25_triplets_rag_docs = bm25_triplets_rag.run(query)
+    # faiss_triplets_rag_docs = faiss_triplets_rag.run(query)
+    # bm25_triplets_rag_docs = bm25_triplets_rag.run(query)
+    faiss_triplets_rag_docs = []
+    bm25_triplets_rag_docs = []
     
-    usefulness_triplets_docs = triplet_usefulness.run(query, keep_first_definition([t.content for t in faiss_triplets_rag_docs + bm25_triplets_rag_docs]))
-    usefulness_triplets_docs = [t for t in sorted(usefulness_triplets_docs, key=lambda t: t.score, reverse=True) if t.label == "Useful"]
+    # usefulness_triplets_docs = triplet_usefulness.run(query, keep_first_definition([t.content for t in faiss_triplets_rag_docs + bm25_triplets_rag_docs]))
+    # usefulness_triplets_docs = [t for t in sorted(usefulness_triplets_docs, key=lambda t: t.score, reverse=True) if t.label == "Useful"]
+    usefulness_triplets_docs = []
     
-    naive_rag_query = f"""{query}
-    {build_context(list(set(usefulness_triplets_docs)))}"""
+    # naive_rag_query = f"""{query}
+    # {build_context(list(set(usefulness_triplets_docs)))}"""
+
+    naive_rag_query = query
     
     faiss_rag_docs = faiss_rag.run(naive_rag_query) 
     bm25_rag_docs = bm25_rag.run(naive_rag_query)
@@ -62,34 +52,43 @@ def pipeline(question: str, options: list[str], answer: str):
     
     explanation = triplet_explainer.run(query, context)
     one_paragraph_explanation = one_paragraph_explainer.run(query, context)
+    # explanation = ""
+    # one_paragraph_explanation = ""
 
-    return explanation, one_paragraph_explanation, faiss_rag_docs, bm25_rag_docs, usefulness_triplets_docs
+    # converation_context = f"Explanation: {explanation}\n\nOne Paragraph Explanation: {one_paragraph_explanation}"
+    # conversation = mcqa_conv.run(query, converation_context)
+    conversation = Conversation(turns=[])
+
+    return explanation, one_paragraph_explanation, faiss_rag_docs, bm25_rag_docs, usefulness_triplets_docs, conversation
 
 def thread_func(batch: pd.DataFrame, batch_save_path: Path):
-    outputs = {
-        "explanation": [],
-        "one_paragraph_explanation": [],
-        "faiss_rag_docs": [],
-        "bm25_rag_docs": [],
-        "usefulness_triplets_docs": []
-    }
+    outputs = []
+    
     for _, row in batch.iterrows():
         question = row["question"]
         options = [row["option1"], row["option2"], row["option3"], row["option4"]]
         answer = row["answer"]
-        explanation, one_paragraph_explanation, faiss_rag_docs, bm25_rag_docs, usefulness_triplets_docs = pipeline(question, options, answer)
-        outputs["explanation"].append(explanation)
-        outputs["one_paragraph_explanation"].append(one_paragraph_explanation)
-        outputs["faiss_rag_docs"].append([doc.model_dump()  for doc in faiss_rag_docs])
-        outputs["bm25_rag_docs"].append([doc.model_dump() for doc in bm25_rag_docs])
-        outputs["usefulness_triplets_docs"].append([t.model_dump() for t in usefulness_triplets_docs])      
+        explanation, one_paragraph_explanation, faiss_rag_docs, bm25_rag_docs, usefulness_triplets_docs, conversation = pipeline(question, options, answer)
+
+        entry = {
+            'id': row['id'],
+            "question": row['question'],
+            "option1": row['option1'],
+            "option2": row['option2'],
+            "option3": row['option3'],
+            "option4": row['option4'],
+            "answer": row['answer'],
+            "faiss_rag_docs": [doc.model_dump()  for doc in faiss_rag_docs],
+            "bm25_rag_docs": [doc.model_dump() for doc in bm25_rag_docs],
+            "usefulness_triplets_docs": [t.model_dump() for t in usefulness_triplets_docs],
+            "explanation": explanation,
+            "one_paragraph_explanation": one_paragraph_explanation,
+            "conversation": conversation.model_dump()
+        }
+        outputs.append(entry)
     
-    batch.loc[:, 'explanation'] = outputs["explanation"]
-    batch.loc[:, 'one_paragraph_explanation'] = outputs["one_paragraph_explanation"]
-    batch.loc[:, 'faiss_rag_docs'] = outputs["faiss_rag_docs"]
-    batch.loc[:, 'bm25_rag_docs'] = outputs["bm25_rag_docs"]
-    batch.loc[:, 'usefulness_triplets_docs'] = outputs["usefulness_triplets_docs"]
-    batch.to_json(batch_save_path, orient="records", lines=True)
+    save_df = pd.DataFrame(outputs)
+    save_df.to_json(batch_save_path, orient="records", lines=True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the pipeline")
@@ -109,13 +108,14 @@ if __name__ == "__main__":
     if args.random_sample is not None:
         df = df.sample(n=args.random_sample, random_state=42)
     
-    faiss_triplets_rag = FaissTripletsRag(top_k=10)
-    bm25_triplets_rag = BM25TripletsRag(top_k=10)
-    triplet_usefulness = TripletsUsefulness()
+    # faiss_triplets_rag = FaissTripletsRag(top_k=10)
+    # bm25_triplets_rag = BM25TripletsRag(top_k=10)
+    # triplet_usefulness = TripletsUsefulness()
     faiss_rag = FaissRag(top_k=5)
     bm25_rag = BM25Rag(top_k=5)
     triplet_explainer = TripletRAGExplainer()
     one_paragraph_explainer = OneParagraphExplainer() 
+    # mcqa_conv = MCQAConversation()
 
     timestring = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     run_folder = Path(f"./outputs/{csv_path.stem}/{timestring}")
@@ -133,4 +133,4 @@ if __name__ == "__main__":
         for future in tqdm(futures):
             future.result()
     
-    merge_jsonl_files(run_folder, run_folder / "merged.jsonl")
+    merge_jsonl_files(run_folder)
