@@ -23,10 +23,9 @@ def merge_csv_files(run_path: Path, dropna=True, remove_duplicates=True):
 
 def get_completed_batch_numbers(outputs_folder: Path) -> set[int]:
     completed_batches = set()
-    for file in outputs_folder.glob("*.csv"):
-        if file.name.startswith("batch_") and file.name.endswith(".csv"):
-            batch_number = int(file.stem.split("_")[1])
-            completed_batches.add(batch_number)
+    for file in outputs_folder.rglob("batch_*.jsonl"):
+        batch_number = int(file.stem.split("_")[1])
+        completed_batches.add(batch_number)
     return completed_batches
 
 def convert_df_to_nested_structure(df):
