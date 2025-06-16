@@ -3,9 +3,8 @@ sys.path.append("/home/sracha/proper_kg_project/")
 
 from pprint import pprint
 import timeit
-from src.components.retrieval.triplets.bm25_retriever import BM25TripletsRetriever
+from src.components.faiss_rag import FaissRag
 
-vector_store_path = "/home/sracha/proper_kg_project/src/components/retrieval/triplets/bm25_retriever/vector_store"
 mock_queries = [
     "What are the symptoms of major depressive disorder in someone with a history of substance abuse and a family history of bipolar disorder?",
     "How does childhood trauma impact the development of borderline personality disorder in those with a family history of schizophrenia?",
@@ -16,20 +15,10 @@ mock_queries = [
 
 
 def run_time_analysis():
-    medrag = None
-
-    def load_retriever():
-        global medrag
-        if medrag is None:
-            start = timeit.default_timer()
-            medrag = BM25TripletsRetriever(vector_store_path)
-            end = timeit.default_timer()
-            print(f"load_retriever took {end-start} seconds")
-        return medrag
-
-    load_retriever()
-
- 
+    start = timeit.default_timer()
+    medrag = FaissRag(10)
+    end = timeit.default_timer()
+    print(f"Loading took {end-start} seconds")
 
     times = []
 
@@ -45,14 +34,15 @@ def run_time_analysis():
 
 
 def inference():
-    medrag = BM25TripletsRetriever(vector_store_path)
+    medrag = FaissRag(10)
     result = medrag.run(mock_queries[0])
     pprint(result)
 
 
 if __name__ == "__main__":
-    # run_time_analysis()
+    run_time_analysis()
+    print("\n\n----------------------\n\n")
     inference()
 
-# load_retriever took 82.68777873693034 seconds ~ 83 seconds ~ 1 min
-# Average time taken for retrieving: 2.600684918416664 ~ 2.6 seconds
+# loading took: 2.252086293010507 seconds ~ 2.25 sec
+# Average time taken for retrieving: 0.07286782060109545 seconds ~ 72 ms
