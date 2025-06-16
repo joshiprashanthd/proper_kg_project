@@ -3,7 +3,7 @@ from pathlib import Path
 import ast
 import json
 
-def merge_jsonl_files(run_path: Path):
+def merge_jsonl_files(run_path: Path, delete_batch_files: bool = True):
     dfs = []
     for file in run_path.glob("batch_*.jsonl"):
         df = pd.read_json(file, lines=True)
@@ -11,6 +11,9 @@ def merge_jsonl_files(run_path: Path):
     merged_df = pd.concat(dfs, ignore_index=True)
     merged_df.to_json(run_path / "merged.jsonl", orient='records', lines=True)
     merged_df.to_json(run_path / "merged.json", orient='records')
+    if delete_batch_files:
+        for file in run_path.glob("batch_*.jsonl"):
+            file.unlink()
 
 def merge_csv_files(run_path: Path, dropna=True, remove_duplicates=True):
     dfs = [pd.read_csv(file) for file in run_path.rglob("*.csv")]
