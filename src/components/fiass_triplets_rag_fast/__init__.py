@@ -1,0 +1,1 @@
+from .faiss_fast_triplets_rag import FaissFastTripletsRag

@@ -3,15 +3,12 @@ from langchain_community.vectorstores import FAISS
 from src.types import RagDocument
 from pathlib import Path
 from src.utils import logger
-import faiss
 
-class FaissTripletsRag:
-    def __init__(self, top_k: int, vector_store_path: Path = Path("/home/sracha/proper_kg_project/src/components/faiss_triplets_rag/vector_store")):
+class FaissFastTripletsRag:
+    def __init__(self, top_k: int, vector_store_path: Path = Path("/home/sracha/proper_kg_project/src/components/fiass_triplets_rag_fast/vector_store")):
         logger.info(f"Loading FAISS vector store from {vector_store_path}")
         self.embeddings_func = HuggingFaceEmbeddings(model_name="FremyCompany/BioLORD-2023", model_kwargs={"device": "cuda"})
         self.vector_store = FAISS.load_local(str(vector_store_path), embeddings=self.embeddings_func, allow_dangerous_deserialization=True)
-        self.index = faiss.IndexIVFFlat(self.vector_store.index, self.vector_store.index.d, 100)
-        self.index.
         self.top_k = top_k
     
     def run(self, query: str) -> list[RagDocument]:

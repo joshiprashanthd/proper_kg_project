@@ -59,45 +59,41 @@ def batch_apply_func(row: pd.Series, definitions: pd.DataFrame) -> str:
 def build_vector_store(triplet_path: Path, definition_path: Path, vector_store_path: Path):
     embeddings_func = HuggingFaceEmbeddings(model_name="FremyCompany/BioLORD-2023", model_kwargs={"device": "cuda"})
 
-    if vector_store_path.exists():
-        print(f"Loading vector store from {vector_store_path}...")
-        vector_store = FAISS.load_local(str(vector_store_path), embeddings=embeddings_func, allow_dangerous_deserialization=True)
-    else:
-        print("Building vector store...")
+    print("Building vector store...")
 
-        index = faiss.IndexHNSWFlat(768, 32)
-        vector_store = FAISS(embedding_function=embeddings_func, index=index, docstore=InMemoryDocstore(), index_to_docstore_id={})
+    index = faiss.IndexHNSWFlat(768, 32)
+    vector_store = FAISS(embedding_function=embeddings_func, index=index, docstore=InMemoryDocstore(), index_to_docstore_id={})
 
-        triplets = pd.read_parquet(triplet_path, engine="pyarrow")
-        definitions = pd.read_parquet(definition_path, engine="pyarrow")
+    triplets = pd.read_parquet(triplet_path, engine="pyarrow")
+    definitions = pd.read_parquet(definition_path, engine="pyarrow")
 
-        triplets = triplets[triplets['SAB'].isin(MENTAL_HEALTH_SABS)]
+    triplets = triplets[triplets['SAB'].isin(MENTAL_HEALTH_SABS)]
 
-        cui_to_def_map = definitions.groupby('CUI')['DEF'].apply(list).to_dict()
+    cui_to_def_map = definitions.groupby('CUI')['DEF'].apply(list).to_dict()
 
-        batch_size = 5000
-        for i in tqdm(range(0, len(triplets), batch_size), desc="Processing triplets"):
-            batch = triplets.iloc[i:i+batch_size]
+    batch_size = 5000
+    for i in tqdm(range(0, len(triplets), batch_size), desc="Processing triplets"):
+        batch = triplets.iloc[i:i+batch_size]
 
-            head_definitions = batch['CUI1'].map(cui_to_def_map).fillna('<|NO_DEFINITION|>')
-            tail_definitions = batch['CUI2'].map(cui_to_def_map).fillna('<|NO_DEFINITION|>')
+        head_definitions = batch['CUI1'].map(cui_to_def_map).fillna('<|NO_DEFINITION|>')
+        tail_definitions = batch['CUI2'].map(cui_to_def_map).fillna('<|NO_DEFINITION|>')
 
-            formatted_head_defs = head_definitions.apply(lambda x: "\n".join(f"{j+1}. {defn}" for j, defn in enumerate(x)) if isinstance(x, list) else x)
-            formatted_tail_defs = tail_definitions.apply(lambda x: "\n".join(f"{j+1}. {defn}" for j, defn in enumerate(x)) if isinstance(x, list) else x)
+        formatted_head_defs = head_definitions.apply(lambda x: "\n".join(f"{j+1}. {defn}" for j, defn in enumerate(x)) if isinstance(x, list) else x)
+        formatted_tail_defs = tail_definitions.apply(lambda x: "\n".join(f"{j+1}. {defn}" for j, defn in enumerate(x)) if isinstance(x, list) else x)
 
-            page_content_list = [
-                PAGE_CONTENT_COMPACT.format(
-                    head=row['NAME1'],
-                    head_definition=formatted_head_defs.iloc[j],
-                    relation=row['RELATION'],
-                    tail=row['NAME2'],
-                    tail_definition=formatted_tail_defs.iloc[j]
-                )
-                for j, (_, row) in enumerate(batch.iterrows())
-            ]
+        page_content_list = [
+            PAGE_CONTENT_COMPACT.format(
+                head=row['NAME1'],
+                head_definition=formatted_head_defs.iloc[j],
+                relation=row['RELATION'],
+                tail=row['NAME2'],
+                tail_definition=formatted_tail_defs.iloc[j]
+            )
+            for j, (_, row) in enumerate(batch.iterrows())
+        ]
 
-            documents_to_add = [Document(page_content=content) for content in page_content_list]
-            vector_store.add_documents(documents_to_add, ids=[str(i+j) for j in range(len(documents_to_add))])
+        documents_to_add = [Document(page_content=content) for content in page_content_list]
+        vector_store.add_documents(documents_to_add, ids=[str(i+j) for j in range(len(documents_to_add))])
 
     return vector_store
 
