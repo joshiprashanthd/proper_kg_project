@@ -1,1 +1,1 @@
-from .bm25_triplets_rag import *
+from .bm25_triplets_rag import BM25TripletsRag
