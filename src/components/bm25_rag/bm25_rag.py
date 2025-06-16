@@ -4,7 +4,7 @@ from src.types import RagDocument
 from src.utils import logger
 
 class BM25Rag:
-    def __init__(self, top_k: int, vectorizer_path: Path = Path("/home/sracha/proper_kg_project/src/components/bm25_rag/bm25_vector_store")):
+    def __init__(self, top_k: int, vectorizer_path: Path = Path("/home/sracha/proper_kg_project/src/components/bm25_rag/vector_store")):
         logger.info(f"Loading BM25 vectorizer from {vectorizer_path}")
         self.vectorizer = BM25Retriever.from_persist_dir(vectorizer_path)
         self.top_k = top_k
